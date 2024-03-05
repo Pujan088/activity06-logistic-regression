@@ -1,21 +1,19 @@
 ---
-title: "Activity 6 - Logistic Regression"
+title: "Logistic Regression"
 output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
 ## Load the necessary packages
 
-Again, we will use two packages from Posit: `{tidyverse}` and `{tidymodels}`.
-
-- Below a new R code chunk and write the code to:
-  - Load `{tidyverse}` and `{tidymodels}` and any other packages you want to use.
-- Give your R code chunk a meaningful name, then run your code chunk or knit your document.
-
-
+```{r packages}
+library(readr)
+library(tidyverse)
+library(tidymodels)
+```
 
 ## Load the data
 
@@ -24,47 +22,44 @@ Again, we will use two packages from Posit: `{tidyverse}` and `{tidymodels}`.
 The data we are working with is again from the OpenIntro site.
 From OpenIntro's [description of the data](https://www.openintro.org/data/index.php?data=resume):
 
-> This experiment data comes from a study that sought to understand the influence of race and gender on job application callback rates.
-> The study monitored job postings in Boston and Chicago for several months during 2001 and 2002 and used this to build up a set of test cases. 
-> Over this time period, the researchers randomly generating résumés to go out to a job posting, such as years of experience and education details, to create a realistic-looking résumé.
-> They then randomly assigned a name to the résumé that would communicate the applicant's gender and race.
-> The first names chosen for the study were selected so that the names would predominantly be recognized as belonging to black or white individuals.
-> For example, Lakisha was a name that their survey indicated would be interpreted as a black woman, while Greg was a name that would generally be interpreted to be associated with a white male.
+This experiment data comes from a study that sought to understand the influence of race and gender on job application callback rates.The study monitored job postings in Boston and Chicago for several months during 2001 and 2002 and used this to build up a set of test cases. 
 
-Review the description page.
-If you still have questions, review the **Source** (also linked to shortly) at the bottom of the description page.
-On an initial reading, there are some concerns with how this study is designed.
-In [the article](https://www.nber.org/system/files/working_papers/w9873/w9873.pdf), the authors do point out some of these concerns (in Sections 3.5 and 5.1).
+Over this time period, the researchers randomly generating résumés to go out to a job posting, such as years of experience and education details, to create a realistic-looking résumé.They then randomly assigned a name to the résumé that would communicate the applicant's gender and race.
 
-Read in the `resume` **CSV** file that is in `day01-logistic/data`.
+The first names chosen for the study were selected so that the names would predominantly be recognized as belonging to black or white individuals.
 
-- Below, create a new R code chunk and write the code to:
-  - *Read* in the *CSV* file from the `data` folder and store it in an R dataframe called `resume`.
-- Give your R code chunk a meaningful name, then run your code chunk or knit your document.
+For example, Lakisha was a name that their survey indicated would be interpreted as a black woman, while Greg was a name that would generally be interpreted to be associated with a white male.
+
+```{r data}
+resume <- read_csv("resume.csv")
+```
+This study is classified as an experiment because it involves the active intervention of researchers who systematically manipulated key variables to investigate their effects on job application callback rates. Specifically, the researchers randomly generated resumes, varying only the names to imply different races and genders, and submitted these to various job postings. This method of random assignment and controlled manipulation—characteristics unique to experimental designs—aims to establish a causal relationship between the perceived race and gender of applicants and the likelihood of receiving a callback. Unlike observational studies, where researchers passively observe outcomes without intervening, this experiment's deliberate intervention allows for a clearer understanding of the influence of racial and gender biases in hiring practices.
 
 
+The variable received_callback is a binary variable, which is a specific type of categorical variable. Binary variables can take on only two possible values, which represent two distinct categories or outcomes.
 
-Recall that you can use `dplyr::glimpse` to see some meta information about the R data frame.
-After doing this and your review of the data's description page, answer the following questions:
+In the context of this study, the two values that received_callback can take would typically be:
 
-1. Is this an observational study or an experiment?
-  Explain.
+1 (or another value such as True): Indicating that the applicant did receive a callback for the job application.
 
+0 (or another value such as False): Indicating that the applicant did not receive a callback for the job application.
 
-2. The variable of interest is `received_callback`.
-  What type of variable is this?
-  What do the values represent?
+The values of this variable represent whether or not an applicant's submission for a job led to a callback from the employer, which is the primary outcome of interest in this experiment. The purpose of using such a variable is to measure the success of the job applications in a quantifiable way, allowing the researchers to assess the impact of race and gender (inferred through the names on the resumes) on employers' callback decisions. This binary outcome serves as a straightforward and effective way to analyze the data and draw conclusions about potential biases in the hiring process.
 
 
-3. For `received_callback`, create an appropriate data visualization using `{ggplot2}`.
-  Be sure to provide more descriptive labels (both axes labels and value labels - there are many ways to do this) as well as an appropriate title.
+```{r plots}
+resume %>% 
+  ggplot(aes(x=received_callback==1)) + 
+  geom_bar() + 
+  theme_bw() + 
+  ylab("Count") + 
+  xlab("Received Call Back") + 
+  ggtitle("Number of Received Call Back")
+
+```
 
 
-4. Below, I provide you with a numerical summary table that should reiterate (i.e., provides numerical values) your plot in (3).
-  First, look at each line of code and describe what I am doing.
-  Then, replace "verbatim" with "r" before the code chunk title to produce this table.
-  
-```{verbatim callback_frequency_table}
+```{r callback_frequency_table}
 resume %>% 
   mutate(received_callback = case_when(
     received_callback == 0 ~ "No",
@@ -77,17 +72,14 @@ resume %>%
 
 
 
-5. Using the output from (3) and (4), what do you notice?
+The information from Output 3, which showed a graphical representation with a substantial imbalance between the "FALSE" (no callback) and "TRUE" (received callback) categories, and Output 4, which provided a numerical summary, both illustrate a stark contrast in callback rates. Specifically, only 8.05% of the résumés received a callback, while a vast majority, 91.95%, did not. This suggests a significantly low callback rate for job applications within the study, hinting at potential underlying factors affecting the likelihood of a callback that may warrant further investigation. 
 
 
 ## Probability and odds
 
-Using your output from (3) and (4), answer the following questions:
+The probability that a randomly selected résumé/person will be called back is approximately 8.05%.
 
-6. What is the probability that a randomly selected résumé/person will be called back?
-
-
-7. What are the [**odds**](https://en.wikipedia.org/wiki/Odds) that a randomly selected résumé/person will be called back?
+The odds of someone getting a call back is 8.75%
 
 
 ## Logistic regression
@@ -112,11 +104,12 @@ $$
 $$
 
 To keep things simpler, we will first explore a logistic regression model with a two-level categorical explanatory variable: `race` - the inferred race associated to the first name on the résumé.
-Below is a two-way table (also known as a contingency table or crosstable), where the rows are the response variable levels, the columns are the explanatory variable levels, and the cells are the percent (and number of in parentheses).
-Note that the values in each column add to 100%.
-Replace "verbatim" with "r" before the code chunk title to produce this table.
 
-```{verbatim crosstable}
+Below is a two-way table (also known as a contingency table or crosstable), where the rows are the response variable levels, the columns are the explanatory variable levels, and the cells are the percent (and number of in parentheses).
+
+Note that the values in each column add to 100%.
+
+```{r crosstable}
 resume %>% 
   mutate(received_callback = case_when(
     received_callback == 0 ~ "No",
@@ -138,21 +131,16 @@ resume %>%
   knitr::kable()
 ```
 
-Using the above table, answer the following question:
+The probability that a randomly selected résumé/person perceived as Black will be called back is given by the percentage of Black applicants who received a 'Yes' for a callback. This is 6.45%.
 
-6. What is the probability that a randomly selected résumé/person perceived as Black will be called back?
-
-
-7. What are the **odds** that a randomly selected résumé/person perceived as Black will be called back?
-
+The probability that a randomly selected résumé/person perceived as Black will be called back is approximately 6.89%.
 
 This process of calculating conditional (e.g., if a résumé/person perceived as Black is called back) odds will be helpful as we fit our logistic model.
-We will now begin to use the `{tidymodel}` method for fitting models.
-A similar approach could be used for linear regression models and you are encouraged to find out how to do this in your past activities.
 
-- Replace "verbatim" with "r" before the code chunk title to produce the logistic model output.
-  
-```{verbatim logistic-model}
+We will now begin to use the `{tidymodel}` method for fitting models.
+
+
+```{r logistic-model}
 # The {tidymodels} method for logistic regression requires that the response be a factor variable
 resume <- resume %>% 
   mutate(received_callback = as.factor(received_callback))
@@ -169,42 +157,16 @@ tidy(resume_mod) %>%
   knitr::kable(digits = 3)
 ```
 
-After doing this, respond to the following questions:
+The regression equation corresponding to résumés/persons perceived as White is received_callback = 0.438(racewhite) - 2.675.
 
-8. Write the estimated regression equation.
-  Round to 3 digits.
+The simplified estimated regression equation corresponding to résumés/persons perceived as Black is `received_callback = ???? (raceblack) + 2.675`
 
+Based on the simplified regression equation for résumés/persons perceived as Black, the log-odds of being called back are the value of the intercept term, which is 
+−2.675.
 
-9. Using your equation in (8), write the *simplified* estimated regression equation corresponding to résumés/persons perceived as Black.
-  Round to 3 digits.
+The odds that a randomly selected résumé/person perceived as Black will be called back are approximately 6.9%.
 
-
-Based on your model, if a randomly selected résumé/person perceived as Black,
-
-10. What are the log-odds that they will be called back?
-
-
-11. What are the odds that they will be called back?
-  How does this relate back to your answer from (7)?
-  *Hint*: In (9) you obtained the log-odds (i.e., the natural log-odds).
-  How can you back-transform this value to obtain the odds?
-
-
-12. What is the probability that will be called back?
-  How does this related back to your answer from (6)?
-  *Hint* Use the odds in (11) to calculate this value.
-
-
-
-
-13. How does the output from following code relate to what you obtained before (8)?
-  How can you use it help you answer (12)?
-  Replace "verbatim" with "r" before the code chunk title to produce the logistic model output.
-
-```{verbatim logistic-model}
-tidy(mult_log_mod, exponentiate = TRUE, conf.int = TRUE) %>% 
-  knitr::kable(digits = 3)
-```
+The probability that a randomly selected résumé/person perceived as Black will be called back is approximately 6.45%.
 
 
 ## Challenge: Extending to Mulitple Logistic Regression
@@ -222,9 +184,7 @@ Note that the researchers have the variable labeled `gender`.
 Like with `race`, they limited their resume/name generation to only two categorizations: "male" and "female".
 The authors do not address this decision in their article or provide any context as to what they mean by "gender".
 
-- Replace "verbatim" with "r" before the code chunk title to produce this table.
-
-```{verbatim resume-subset}
+```{r resume-subset}
 resume_subet <- resume %>% 
   filter(job_city == "Chicago") %>% 
   mutate(race = case_when(
@@ -238,33 +198,105 @@ resume_subet <- resume %>%
   select(received_callback, years_experience, race, gender)
 ```
 
-Describe what the above code does in the context of this problem.
+Here's a step-by-step explanation of what the code does:
 
+Filtering: The filter(job_city == "Chicago") function call reduces the dataset to include only the rows where the job_city column's value is "Chicago". This step focuses the analysis on resumes submitted for jobs located in Chicago.
+
+Mutating and Recoding race: The mutate() function is used to transform or add new columns to the dataset. Within this function, case_when() is used for conditional recoding of the race column:
+
+If race equals "white", it is recoded to "White".
+
+All other values of race (implicitly, those not equal to "white") are recoded to "Black".
+
+This suggests the analysis is focused on comparing outcomes between two racial groups labeled "White" and "Black".
+
+Mutating and Recoding gender: Still within the same mutate() call, gender is also recoded using case_when():
+
+If gender equals "f", it is recoded to "female".
+
+All other values of gender (implicitly, those not equal to "f") are recoded to "male".
+
+This step simplifies gender into two categories: "male" and "female".
+
+Selecting Specific Columns: Finally, the select(received_callback, years_experience, race, gender) function call trims the dataset down to include only the columns relevant for further analysis: whether the resume received a callback (received_callback), the years of experience (years_experience), and the recoded race and gender.
+
+The resulting dataset, named resume_subet is a filtered and transformed version of the original resume dataset. It is now specifically tailored to analyze the effects of race and gender on the callback rates for job applications in Chicago, with a clear focus on comparing outcomes between these specified groups while controlling for years of experience. This streamlined dataset can then be used for statistical analysis or visualization to explore potential biases in callback rates based on the recoded race and gender categories.
 
 
 ## Relationship Exploration
 
-There are many variables in this model.
-Let's explore each explanatory variable's relationship with the response variable.
-Note that I tried to explore this using `GGally::ggbivariate`, but kept running into an error that I did not have time to explore.
+There are many variables in this model. Let's explore each explanatory variable's relationship with the response variable.
 
-- Create a new R code chunk and create an appropriate data visualization to explore the relationship between `resume_subet` and each of the explanatory variables, then run your code chunk or knit your document.
 
-After doing this, answer the following question:
+```{r}
+library(ggplot2)
 
-14. Describe any patterns. What do you notice?
+ggplot(resume_subet, aes(x = received_callback, y = years_experience, fill = received_callback)) +
+  geom_boxplot() +
+  labs(title = "Years of Experience and Callback Status",
+       x = "Callback Received",
+       y = "Years of Experience") +
+  theme_bw()
+```
 
+```{r}
+# For Race
+ggplot(resume_subet, aes(x = race, fill = received_callback)) +
+  geom_bar(position = "fill") +
+  labs(title = "Callback Rates by Race",
+       x = "Race",
+       y = "Proportion") +
+  theme_bw()
+```
+
+```{r}
+# For Gender
+ggplot(resume_subet, aes(x = gender, fill = received_callback)) +
+  geom_bar(position = "fill") +
+  labs(title = "Callback Rates by Gender",
+       x = "Gender",
+       y = "Proportion") +
+  theme_bw()
+
+```
+
+The three plots represent the relationship between years of experience, race, and gender with respect to callback status for job applications. Here are the observed patterns:
+
+Years of Experience and Callback Status:
+
+The box plot shows the distribution of years of experience for applicants who did not receive a callback (0) and those who did (1).
+
+There's an overlap in the years of experience between those who received a callback and those who did not, suggesting that years of experience might not be a strong differentiator in the likelihood of receiving a callback.
+
+The median years of experience for both groups are similar, although those who did receive a callback have a slightly higher interquartile range, suggesting a somewhat higher concentration of individuals with more experience in the callback group.
+
+Callback Rates by Race:
+
+The bar plot indicates the proportion of callbacks received by applicants perceived as Black and White.
+There is a visible disparity in the callback rates by race. Applicants perceived as White have a higher proportion of callbacks compared to those perceived as Black, which suggests a potential racial bias in the callback rates.
+
+Callback Rates by Gender:
+
+The bar plot shows the callback rates broken down by gender.
+
+The proportions of callbacks are similar across genders, with a slightly higher proportion for males compared to females. However, the difference is not as pronounced as the difference observed in callback rates by race.
+
+Overall, race seems to play a more significant role than gender or years of experience in the likelihood of receiving a callback based on these visualizations. The data suggests potential racial bias in the hiring process, as indicated by the difference in callback rates between Black and White applicants. Meanwhile, gender does not seem to have as stark a difference in the callback rates, and the impact of years of experience is not clearly delineated from these plots alone. 
 
 ## Fitting the model
 
-Aside: I kept running into an issue using `{tidymodels}` to fit this model so I defaulted back to a method that I know works using `glm`.
-I will keep exploring why I was experiencing issues and update you all with a more modern method later this semester.
-Using the logistic model code above, create a new code chunk below to fit the model to address our research question.
+```{r}
+mult_log_mod <- glm(received_callback ~ years_experience + race + gender, data = resume_subet, family = "binomial")
+
+tidy(mult_log_mod) %>% 
+  knitr::kable(digits = 3)
+```
 
 Focusing on the estimated coefficient for `years_experience`, we would say:
 
-> For each additional year of experience for an applicant in Chicago, we expect the *log odds* of an applicant receiving a call back to increase by 0.045 units.
-> Assuming applicants have similar time in spent in college, similar inferred races, and similar inferred gender.
+For each additional year of experience for an applicant in Chicago, we expect the *log odds* of an applicant receiving a call back to increase by 0.045 units.
+
+Assuming applicants have similar time in spent in college, similar inferred races, and similar inferred gender.
 
 This interpretation is somewhat confusing because we are describing this in *log odds*.
 Fortunately, we can convert these back to odds using the following transformation:
@@ -272,17 +304,12 @@ Fortunately, we can convert these back to odds using the following transformatio
 $$
 \text{odds} = e^{\log(\text{odds})}
 $$
+The estimated coefficient for years_experience in the logistic regression model is 0.045. This coefficient represents the change in the log-odds of the outcome variable (receiving a callback) for each one-unit increase in years of experience, holding all other variables constant.
 
-
-You saw how to do this in (13)
-
-After doing this, answer the following question:
-
-15. Interpret the estimated coefficient for `years_experience`.
-
-## Assessing model fit
+# Assessing model fit
 
 Now we want to check the residuals of this model to check the model's fit.
+
 As we saw for multiple linear regression, there are various kinds of residuals that try to adjust for various features of the data. 
 Two new residuals to explore are *Pearson residuals* and *Deviance residuals*.
 
@@ -305,10 +332,7 @@ $$
 
 Since Pearson residuals are similar to residuals that we have already explored, we will instead focus on the deviance residuals.
 
-- Replace "verbatim" with "r" before the code chunk title to produce this table. 
-  You might need to update other R objects in this code - my model was called `mult_log_mod`
-  
-```{verbatim residual-plots}
+```{r residual-plots}
 # To store residuals and create row number variable
 mult_log_aug <- augment(mult_log_mod, type.predict = "response", 
                       type.residuals = "deviance") %>% 
@@ -332,6 +356,9 @@ labs(x = "id",
 ```
 
 Here we produced two residual plots: the deviance residuals against the fitted values and the deviance variables against the index id (an index plot).
+
 The index plot allows us to easily see some of the more extreme observations - there are a lot ($|d_i| > 2$ is quiet alarming).
+
 The residual plot may look odd (why are there two distinct lines?!?), but this is a pretty typical shape when working with a binary response variable (the original data is really either a 0 or a 1).
+
 In general because there are so many extreme values in the index plot, this model leaves room for improvement.
